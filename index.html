@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="식권관리">
+<title>식권 잔액 관리</title>
+<style>
+:root{--blue:#2563EB;--blue-dark:#1D4ED8;--blue-light:#EFF6FF;--red:#DC2626;--red-light:#FEF2F2;--g50:#F8FAFC;--g100:#F1F5F9;--g200:#E2E8F0;--g400:#94A3B8;--g600:#475569;--g800:#1E293B;--g900:#0F172A;--r:14px;--rs:10px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;background:var(--g100);color:var(--g900);display:flex;flex-direction:column;max-width:430px;margin:0 auto;height:100%}
+
+/* SETUP SCREEN */
+.setup{position:fixed;inset:0;background:linear-gradient(160deg,#1E3A8A 0%,#2563EB 65%,#3B82F6 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;z-index:300;transition:opacity .3s}
+.setup.hide{opacity:0;pointer-events:none}
+.setup-icon{font-size:52px;margin-bottom:20px}
+.setup-title{font-size:26px;font-weight:700;color:white;margin-bottom:8px;letter-spacing:-.5px}
+.setup-sub{font-size:14px;color:rgba(255,255,255,.65);margin-bottom:40px;text-align:center;line-height:1.7}
+.setup-card{background:white;border-radius:20px;padding:24px;width:100%;margin-bottom:16px}
+.setup-lbl{font-size:13px;color:var(--g600);font-weight:500;margin-bottom:8px}
+.setup-input{width:100%;border:1.5px solid var(--g200);border-radius:var(--rs);padding:14px 16px;font-size:24px;font-weight:700;font-family:inherit;background:var(--g50);color:var(--g900);text-align:right}
+.setup-input:focus{outline:none;border-color:var(--blue);background:white}
+.setup-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.setup-chip{padding:8px 14px;border-radius:100px;font-size:13px;font-weight:600;cursor:pointer;background:var(--blue-light);color:var(--blue);border:1.5px solid #BFDBFE}
+.setup-chip:active{transform:scale(.94)}
+.setup-btn{width:100%;padding:16px;border-radius:var(--rs);font-size:17px;font-weight:700;cursor:pointer;border:none;font-family:inherit;background:white;color:var(--blue)}
+.setup-btn:active{opacity:.85}
+
+/* HEADER */
+.hdr{background:linear-gradient(160deg,#1E3A8A 0%,#2563EB 65%,#3B82F6 100%);padding:52px 24px 24px;color:white;flex-shrink:0}
+.hdr-rcpt{font-size:11px;opacity:.5;letter-spacing:.3px;margin-bottom:10px}
+.hdr-lbl{font-size:12px;opacity:.6;margin-bottom:4px}
+.hdr-bal{font-size:44px;font-weight:700;letter-spacing:-2px;line-height:1}
+.hdr-won{font-size:20px;font-weight:400;opacity:.75}
+.hdr-meta{display:flex;margin-top:16px;background:rgba(255,255,255,.12);border-radius:10px;overflow:hidden}
+.hm{flex:1;padding:10px 14px}
+.hm:first-child{border-right:1px solid rgba(255,255,255,.15)}
+.hm-lbl{font-size:11px;opacity:.55;margin-bottom:3px}
+.hm-val{font-size:15px;font-weight:600}
+
+/* TABS */
+.tabs{display:flex;background:white;border-bottom:1px solid var(--g200);flex-shrink:0}
+.tab{flex:1;padding:13px 0 11px;font-size:13px;font-weight:500;text-align:center;cursor:pointer;color:var(--g400);border-bottom:2.5px solid transparent;transition:all .2s}
+.tab.on{color:var(--blue);border-bottom-color:var(--blue)}
+
+/* BODY */
+.body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;display:flex;flex-direction:column;gap:12px}
+.panel{display:none;flex-direction:column;gap:12px}
+.panel.on{display:flex}
+.card{background:white;border-radius:var(--r);padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.ctitle{font-size:11px;font-weight:600;color:var(--g400);letter-spacing:.6px;text-transform:uppercase;margin-bottom:16px}
+.balbox{background:var(--g50);border-radius:var(--rs);padding:14px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;border:1.5px solid var(--g200)}
+.balbox-lbl{font-size:13px;color:var(--g600)}
+.balbox-val{font-size:20px;font-weight:700;color:var(--blue)}
+.flbl{font-size:13px;color:var(--g600);font-weight:500;margin-bottom:6px}
+input[type=number]{width:100%;border:1.5px solid var(--g200);border-radius:var(--rs);padding:13px 16px;font-size:22px;font-weight:600;font-family:inherit;background:var(--g50);color:var(--g900);transition:border .15s;margin-bottom:14px}
+input[type=number]:focus{outline:none;border-color:var(--blue);background:white}
+input::placeholder{color:var(--g200);font-weight:400;font-size:16px}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+.chip{padding:8px 14px;border-radius:100px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid;transition:transform .1s}
+.chip:active{transform:scale(.93)}
+.cb{background:var(--blue-light);color:var(--blue);border-color:#BFDBFE}
+.cr{background:var(--red-light);color:var(--red);border-color:#FECACA}
+.smsbox{background:var(--g50);border:1.5px solid var(--g200);border-radius:var(--rs);padding:16px;margin-bottom:16px}
+.smsbox-lbl{font-size:11px;color:var(--g400);font-weight:600;letter-spacing:.4px;margin-bottom:10px}
+.smstxt{font-size:15px;line-height:2.1;color:var(--g800);white-space:pre-line}
+.btn{width:100%;padding:15px;border-radius:var(--rs);font-size:16px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .15s}
+.btn:active{transform:scale(.98)}
+.btn-blue{background:var(--blue);color:white}
+.btn-blue:active{background:var(--blue-dark)}
+.btn-red{background:var(--red);color:white}
+.btn-red:active{background:#B91C1C}
+.btn-out{background:white;color:var(--g600);border:1.5px solid var(--g200);font-size:14px;padding:12px}
+
+/* HISTORY */
+.tx{background:white;border-radius:var(--rs);padding:14px 16px;box-shadow:0 1px 2px rgba(0,0,0,.05);display:flex;justify-content:space-between;align-items:center;gap:12px}
+.tx-left{flex:1;min-width:0}
+.tx-lbl{font-size:14px;font-weight:600;color:var(--g900)}
+.tx-date{font-size:11px;color:var(--g400);margin-top:3px}
+.tx-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.txbadge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px}
+.bc{background:var(--blue-light);color:var(--blue)}
+.bu{background:var(--red-light);color:var(--red)}
+.txamt{font-size:16px;font-weight:700}
+.ac{color:var(--blue)}
+.au{color:var(--red)}
+.txbal{font-size:11px;color:var(--g400)}
+.del-btn{background:var(--g100);border:none;border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;color:var(--g600);flex-shrink:0}
+.del-btn:active{background:var(--red-light);color:var(--red)}
+.empty{text-align:center;padding:52px 20px;color:var(--g400);font-size:14px;line-height:1.9}
+
+/* SETTINGS */
+.srow{display:flex;justify-content:space-between;align-items:center;padding:15px 0;border-bottom:1px solid var(--g100)}
+.srow:last-child{border-bottom:none;padding-bottom:0}
+.slbl{font-size:15px;color:var(--g800)}
+.ssub{font-size:12px;color:var(--g400);margin-top:2px}
+.sbtn{font-size:13px;font-weight:600;padding:8px 16px;border-radius:100px;border:none;cursor:pointer}
+.sbtn-red{background:var(--red-light);color:var(--red)}
+.sbtn-gray{background:var(--g100);color:var(--g600)}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-bg.show{opacity:1;pointer-events:all}
+.modal{background:white;border-radius:20px 20px 0 0;padding:24px 20px 44px;width:100%;max-width:430px;transform:translateY(30px);transition:transform .25s}
+.modal-bg.show .modal{transform:translateY(0)}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:8px;color:var(--g900)}
+.modal-desc{font-size:14px;color:var(--g600);margin-bottom:24px;line-height:1.7;white-space:pre-line}
+.modal-btns{display:flex;flex-direction:column;gap:10px}
+
+/* TOAST */
+.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--g900);color:white;padding:12px 22px;border-radius:100px;font-size:14px;font-weight:500;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;z-index:400}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- 초기 잔액 설정 화면 -->
+<div class="setup" id="setup">
+  <div class="setup-icon">🧾</div>
+  <div class="setup-title">식권 잔액 관리</div>
+  <div class="setup-sub">처음 사용하시나요?<br>현재 보유 중인 잔액을 입력해주세요.<br>잔액이 없으면 0원으로 시작하세요.</div>
+  <div class="setup-card">
+    <div class="setup-lbl">현재 잔액</div>
+    <input class="setup-input" type="number" id="init-bal" placeholder="0">
+    <div class="setup-chips">
+      <div class="setup-chip" onclick="addInitBal(10000)">+1만</div>
+      <div class="setup-chip" onclick="addInitBal(30000)">+3만</div>
+      <div class="setup-chip" onclick="addInitBal(50000)">+5만</div>
+      <div class="setup-chip" onclick="addInitBal(100000)">+10만</div>
+    </div>
+  </div>
+  <button class="setup-btn" onclick="initStart()">시작하기 →</button>
+</div>
+
+<!-- 메인 앱 -->
+<div class="hdr">
+  <div class="hdr-rcpt">수신 · 파리바게뜨기흥테라타워 &nbsp;010-7747-7562</div>
+  <div class="hdr-lbl">현재 잔액</div>
+  <div class="hdr-bal" id="hdr-bal">0<span class="hdr-won">원</span></div>
+  <div class="hdr-meta">
+    <div class="hm"><div class="hm-lbl">총 충전</div><div class="hm-val" id="hdr-c">0원</div></div>
+    <div class="hm"><div class="hm-lbl">총 사용</div><div class="hm-val" id="hdr-u">0원</div></div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab on" onclick="goTab('charge')">충전</div>
+  <div class="tab" onclick="goTab('use')">사용</div>
+  <div class="tab" onclick="goTab('history')">내역</div>
+  <div class="tab" onclick="goTab('setting')">설정</div>
+</div>
+
+<div class="body">
+
+  <!-- 충전 -->
+  <div class="panel on" id="panel-charge">
+    <div class="card">
+      <div class="ctitle">충전</div>
+      <div class="balbox">
+        <div class="balbox-lbl">이전 잔액</div>
+        <div class="balbox-val" id="c-prev">0원</div>
+      </div>
+      <div class="flbl">충전 금액</div>
+      <input type="number" id="c-amt" placeholder="0" oninput="refreshC()">
+      <div class="chips">
+        <div class="chip cb" onclick="addA('c-amt',10000)">+1만</div>
+        <div class="chip cb" onclick="addA('c-amt',30000)">+3만</div>
+        <div class="chip cb" onclick="addA('c-amt',50000)">+5만</div>
+        <div class="chip cb" onclick="addA('c-amt',100000)">+10만</div>
+      </div>
+      <div class="smsbox">
+        <div class="smsbox-lbl">문자 미리보기</div>
+        <div class="smstxt" id="c-preview">금액을 입력하세요</div>
+      </div>
+      <button class="btn btn-blue" onclick="doCharge()">문자 보내기</button>
+    </div>
+  </div>
+
+  <!-- 사용 -->
+  <div class="panel" id="panel-use">
+    <div class="card">
+      <div class="ctitle">사용</div>
+      <div class="balbox">
+        <div class="balbox-lbl">현재 잔액</div>
+        <div class="balbox-val" id="u-prev">0원</div>
+      </div>
+      <div class="flbl">사용 금액</div>
+      <input type="number" id="u-amt" placeholder="0" oninput="refreshU()">
+      <div class="chips">
+        <div class="chip cr" onclick="setA('u-amt',5000)">5천</div>
+        <div class="chip cr" onclick="setA('u-amt',8000)">8천</div>
+        <div class="chip cr" onclick="setA('u-amt',10000)">1만</div>
+        <div class="chip cr" onclick="setA('u-amt',15000)">1.5만</div>
+      </div>
+      <div class="smsbox">
+        <div class="smsbox-lbl">문자 미리보기</div>
+        <div class="smstxt" id="u-preview">금액을 입력하세요</div>
+      </div>
+      <button class="btn btn-red" onclick="doUse()">문자 보내기</button>
+    </div>
+  </div>
+
+  <!-- 내역 -->
+  <div class="panel" id="panel-history">
+    <div class="card" style="display:flex;padding:0;overflow:hidden">
+      <div style="flex:1;padding:14px 16px;border-right:1px solid var(--g100)">
+        <div style="font-size:11px;color:var(--g400);margin-bottom:4px">총 충전</div>
+        <div style="font-size:18px;font-weight:700;color:var(--blue)" id="sc">0원</div>
+      </div>
+      <div style="flex:1;padding:14px 16px">
+        <div style="font-size:11px;color:var(--g400);margin-bottom:4px">총 사용</div>
+        <div style="font-size:18px;font-weight:700;color:var(--red)" id="su">0원</div>
+      </div>
+    </div>
+    <div id="hlist"></div>
+  </div>
+
+  <!-- 설정 -->
+  <div class="panel" id="panel-setting">
+    <div class="card">
+      <div class="ctitle">데이터 관리</div>
+      <div class="srow">
+        <div>
+          <div class="slbl">잔액 직접 수정</div>
+          <div class="ssub">현재 잔액을 수동으로 변경</div>
+        </div>
+        <button class="sbtn sbtn-gray" onclick="openModal('editbal')">수정</button>
+      </div>
+      <div class="srow">
+        <div>
+          <div class="slbl">전체 초기화</div>
+          <div class="ssub">잔액 · 내역 모두 0으로 초기화</div>
+        </div>
+        <button class="sbtn sbtn-red" onclick="openModal('reset')">초기화</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ctitle">수신 정보</div>
+      <div class="srow" style="border:none;padding:0">
+        <div>
+          <div class="slbl">파리바게뜨기흥테라타워</div>
+          <div class="ssub">010-7747-7562 · 고정</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 모달 -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="modal-title" id="m-title">확인</div>
+    <div class="modal-desc" id="m-desc"></div>
+    <div id="m-extra"></div>
+    <div class="modal-btns" id="m-btns"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PHONE='01077477562';
+let MA='';
+let deleteTxId=null;
+let S=JSON.parse(localStorage.getItem('sikwon4')||'null');
+
+// 첫 실행 여부
+if(S){
+  document.getElementById('setup').classList.add('hide');
+} else {
+  S={balance:0,totalCharge:0,totalUse:0,history:[]};
+}
+
+const fw=n=>n.toLocaleString('ko-KR')+'원';
+function save(){localStorage.setItem('sikwon4',JSON.stringify(S));}
+
+function render(){
+  document.getElementById('hdr-bal').innerHTML=S.balance.toLocaleString('ko-KR')+'<span class="hdr-won">원</span>';
+  document.getElementById('hdr-c').textContent=fw(S.totalCharge);
+  document.getElementById('hdr-u').textContent=fw(S.totalUse);
+  document.getElementById('c-prev').textContent=fw(S.balance);
+  document.getElementById('u-prev').textContent=fw(S.balance);
+  document.getElementById('sc').textContent=fw(S.totalCharge);
+  document.getElementById('su').textContent=fw(S.totalUse);
+  renderH();
+}
+
+function renderH(){
+  const el=document.getElementById('hlist');
+  if(!S.history.length){el.innerHTML='<div class="empty">거래 내역이 없습니다<br><span style="font-size:12px">충전 또는 사용 내역이 여기에 표시됩니다</span></div>';return;}
+  const fd=ts=>{const d=new Date(ts);return`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
+  el.innerHTML='<div style="display:flex;flex-direction:column;gap:8px">'+
+    [...S.history].reverse().map(tx=>`
+      <div class="tx">
+        <div class="tx-left">
+          <div class="tx-lbl">${tx.type==='charge'?'충전':'사용'}</div>
+          <div class="tx-date">${fd(tx.date)} · 잔액 ${fw(tx.balAfter)}</div>
+        </div>
+        <div class="tx-right">
+          <div class="txbadge ${tx.type==='charge'?'bc':'bu'}">${tx.type==='charge'?'충전':'사용'}</div>
+          <div class="txamt ${tx.type==='charge'?'ac':'au'}">${tx.type==='charge'?'+':'-'}${fw(tx.amount)}</div>
+        </div>
+        <button class="del-btn" onclick="confirmDelete('${tx.id}')">삭제</button>
+      </div>`).join('')+
+  '</div>';
+}
+
+// 초기 설정
+function addInitBal(v){
+  const el=document.getElementById('init-bal');
+  el.value=(parseInt(el.value)||0)+v;
+}
+function initStart(){
+  const bal=parseInt(document.getElementById('init-bal').value)||0;
+  S.balance=bal;
+  if(bal>0){
+    S.history.push({id:uid(),type:'init',amount:bal,date:Date.now(),balBefore:0,balAfter:bal});
+  }
+  save();render();
+  document.getElementById('setup').classList.add('hide');
+}
+
+// 탭
+function goTab(n){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('panel-'+n).classList.add('on');
+  ['charge','use','history','setting'].forEach((v,i)=>{if(v===n)document.querySelectorAll('.tab')[i].classList.add('on');});
+}
+
+// 금액
+function addA(id,v){const el=document.getElementById(id);el.value=(parseInt(el.value)||0)+v;el.dispatchEvent(new Event('input'));}
+function setA(id,v){const el=document.getElementById(id);el.value=v;el.dispatchEvent(new Event('input'));}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
+
+// SMS 텍스트
+function makeSMS(type,amt){
+  const prev=S.balance;
+  const next=type==='charge'?prev+amt:prev-amt;
+  const lbl=type==='charge'?'충    전':'사    용';
+  return`[식권 ${type==='charge'?'충전':'사용'} 알림]\n이전 잔액 : ${fw(prev)}\n${lbl} : ${fw(amt)}\n최종 잔액 : ${fw(next)}`;
+}
+
+function refreshC(){
+  const amt=parseInt(document.getElementById('c-amt').value)||0;
+  document.getElementById('c-preview').textContent=amt>0?makeSMS('charge',amt):'금액을 입력하세요';
+}
+function refreshU(){
+  const amt=parseInt(document.getElementById('u-amt').value)||0;
+  if(amt>0){
+    document.getElementById('u-preview').textContent=makeSMS('use',amt);
+    if(amt>S.balance)showToast('⚠️ 잔액 초과');
+  } else {
+    document.getElementById('u-preview').textContent='금액을 입력하세요';
+  }
+}
+
+// 충전
+function doCharge(){
+  const amt=parseInt(document.getElementById('c-amt').value)||0;
+  if(amt<=0){showToast('금액을 입력하세요');return;}
+  const txt=makeSMS('charge',amt);
+  const prev=S.balance;
+  S.balance+=amt;S.totalCharge+=amt;
+  S.history.push({id:uid(),type:'charge',amount:amt,date:Date.now(),balBefore:prev,balAfter:S.balance});
+  save();render();
+  document.getElementById('c-amt').value='';
+  document.getElementById('c-preview').textContent='금액을 입력하세요';
+  sendSMS(txt);
+}
+
+// 사용
+function doUse(){
+  const amt=parseInt(document.getElementById('u-amt').value)||0;
+  if(amt<=0){showToast('금액을 입력하세요');return;}
+  if(amt>S.balance){showToast('잔액이 부족합니다');return;}
+  const txt=makeSMS('use',amt);
+  const prev=S.balance;
+  S.balance-=amt;S.totalUse+=amt;
+  S.history.push({id:uid(),type:'use',amount:amt,date:Date.now(),balBefore:prev,balAfter:S.balance});
+  save();render();
+  document.getElementById('u-amt').value='';
+  document.getElementById('u-preview').textContent='금액을 입력하세요';
+  sendSMS(txt);
+}
+
+// 문자 보내기: 클립보드 복사 + 즉시 문자앱 열기
+function sendSMS(txt){
+  // 클립보드 복사 시도 (실패해도 문자앱은 열림)
+  try{ navigator.clipboard.writeText(txt); }catch(e){}
+  // iOS에서 sms: 링크로 즉시 문자앱 열기
+  const a=document.createElement('a');
+  a.href='sms:'+PHONE;
+  a.click();
+  showToast('문자 앱이 열렸습니다 · 붙여넣기 하세요');
+}
+
+// 내역 개별 삭제
+function confirmDelete(id){
+  deleteTxId=id;
+  const tx=S.history.find(t=>t.id===id);
+  if(!tx)return;
+  const typeStr=tx.type==='charge'?'충전':'사용';
+  const revert=tx.type==='charge'?`잔액 ${fw(tx.amount)} 감소`:`잔액 ${fw(tx.amount)} 증가`;
+  openModal('delone',{
+    title:`${typeStr} 내역 삭제`,
+    desc:`${fw(tx.amount)} ${typeStr} 내역을 삭제합니다.\n→ ${revert}됩니다.`
+  });
+}
+
+// 모달
+function openModal(action,opts){
+  MA=action;
+  const cfg={
+    delone:{t:opts?.title||'내역 삭제',d:opts?.desc||'',btns:`<button class="btn btn-red" onclick="doConfirm()">삭제</button><button class="btn btn-out" onclick="closeModal()">취소</button>`},
+    editbal:{t:'잔액 직접 수정',d:'현재 잔액을 수동으로 변경합니다.\n내역에 기록되지 않습니다.',btns:`<button class="btn btn-blue" onclick="doConfirm()">변경</button><button class="btn btn-out" onclick="closeModal()">취소</button>`},
+    reset:{t:'전체 초기화',d:'잔액과 모든 거래 내역이\n0으로 초기화됩니다.\n\n이 작업은 되돌릴 수 없습니다.',btns:`<button class="btn btn-red" onclick="doConfirm()">초기화</button><button class="btn btn-out" onclick="closeModal()">취소</button>`}
+  };
+  const c=cfg[action];
+  document.getElementById('m-title').textContent=c.t;
+  document.getElementById('m-desc').textContent=c.d;
+  document.getElementById('m-extra').innerHTML=action==='editbal'?`<input type="number" id="edit-bal-input" style="width:100%;border:1.5px solid var(--g200);border-radius:var(--rs);padding:12px 14px;font-size:20px;font-weight:700;font-family:inherit;background:var(--g50);color:var(--g900);margin-bottom:16px" value="${S.balance}">`:'';
+  document.getElementById('m-btns').innerHTML=c.btns;
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal(){document.getElementById('modal').classList.remove('show');deleteTxId=null;}
+document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+function doConfirm(){
+  if(MA==='delone'&&deleteTxId){
+    const idx=S.history.findIndex(t=>t.id===deleteTxId);
+    if(idx>-1){
+      const tx=S.history[idx];
+      // 잔액 되돌림
+      if(tx.type==='charge'){
+        S.balance-=tx.amount;
+        S.totalCharge-=tx.amount;
+      } else if(tx.type==='use'){
+        S.balance+=tx.amount;
+        S.totalUse-=tx.amount;
+      }
+      S.balance=Math.max(0,S.balance);
+      S.history.splice(idx,1);
+      showToast('내역 삭제 · 잔액이 되돌려졌습니다');
+    }
+  } else if(MA==='editbal'){
+    const newBal=parseInt(document.getElementById('edit-bal-input').value)||0;
+    S.balance=Math.max(0,newBal);
+    showToast('잔액이 변경되었습니다');
+  } else if(MA==='reset'){
+    S={balance:0,totalCharge:0,totalUse:0,history:[]};
+    showToast('전체 초기화 완료');
+  }
+  save();render();closeModal();
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+render();
+</script>
+</body>
+</html>
