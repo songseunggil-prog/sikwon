@@ -218,6 +218,30 @@ input::placeholder{color:var(--g200);font-weight:400;font-size:16px}
         <div style="font-size:18px;font-weight:700;color:var(--red)" id="su">0원</div>
       </div>
     </div>
+    <div class="card" id="chart-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <button onclick="calMove(-1)" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--g600);padding:0 4px">‹</button>
+          <div style="font-size:15px;font-weight:600;color:var(--g900)" id="cal-title">2026년 4월</div>
+          <button onclick="calMove(1)" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--g600);padding:0 4px">›</button>
+        </div>
+        <div style="display:flex;gap:12px;font-size:11px;color:var(--g400)">
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#2563EB;display:inline-block"></span>충전</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#DC2626;display:inline-block"></span>사용</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <div style="flex:1;background:var(--g50);border-radius:8px;padding:10px 12px">
+          <div style="font-size:11px;color:var(--g400);margin-bottom:3px">이달 충전</div>
+          <div style="font-size:15px;font-weight:700;color:var(--blue)" id="mc-charge">0원</div>
+        </div>
+        <div style="flex:1;background:var(--g50);border-radius:8px;padding:10px 12px">
+          <div style="font-size:11px;color:var(--g400);margin-bottom:3px">이달 사용</div>
+          <div style="font-size:15px;font-weight:700;color:var(--red)" id="mc-use">0원</div>
+        </div>
+      </div>
+      <div id="cal-grid"></div>
+    </div>
     <div id="hlist"></div>
   </div>
 
@@ -468,6 +492,88 @@ function showToast(msg){
 }
 
 render();
+</script>
+<script>
+let calYear=new Date().getFullYear();
+let calMonth=new Date().getMonth();
+
+function calMove(dir){
+  calMonth+=dir;
+  if(calMonth>11){calMonth=0;calYear++;}
+  if(calMonth<0){calMonth=11;calYear--;}
+  buildCal();
+}
+
+function fwShort(n){
+  if(n===0)return'';
+  return n.toLocaleString();
+}
+
+function buildCal(){
+  const y=calYear,m=calMonth;
+  document.getElementById('cal-title').textContent=`${y}년 ${m+1}월`;
+
+  // 해당 월 일별 충전/사용 집계
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const chargeByDay={},useByDay={};
+  S.history.forEach(tx=>{
+    if(tx.type!=='charge'&&tx.type!=='use')return;
+    const d=new Date(tx.date);
+    if(d.getFullYear()!==y||d.getMonth()!==m)return;
+    const day=d.getDate();
+    if(tx.type==='charge') chargeByDay[day]=(chargeByDay[day]||0)+tx.amount;
+    else useByDay[day]=(useByDay[day]||0)+tx.amount;
+  });
+
+  // 월 합계 카드
+  const totalC=Object.values(chargeByDay).reduce((a,b)=>a+b,0);
+  const totalU=Object.values(useByDay).reduce((a,b)=>a+b,0);
+  document.getElementById('mc-charge').textContent=fw(totalC);
+  document.getElementById('mc-use').textContent=fw(totalU);
+
+  // 달력 그리기
+  const firstDay=new Date(y,m,1).getDay(); // 0=일
+  const days=['일','월','화','수','목','금','토'];
+
+  let html=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">`;
+
+  // 요일 헤더
+  days.forEach((d,i)=>{
+    const col=i===0?'#DC2626':i===6?'#2563EB':'var(--g600)';
+    html+=`<div style="text-align:center;font-size:11px;font-weight:700;color:${col};padding:4px 0">${d}</div>`;
+  });
+
+  // 빈칸
+  for(let i=0;i<firstDay;i++){
+    html+=`<div></div>`;
+  }
+
+  // 날짜 셀
+  for(let d=1;d<=daysInMonth;d++){
+    const dow=(firstDay+d-1)%7;
+    const isToday=new Date().getFullYear()===y&&new Date().getMonth()===m&&new Date().getDate()===d;
+    const c=chargeByDay[d]||0;
+    const u=useByDay[d]||0;
+    const dateColor=dow===0?'#DC2626':dow===6?'#2563EB':'var(--g900)';
+    const todayStyle=isToday?`background:#EFF6FF;border-radius:6px;`:'';
+
+    html+=`<div style="padding:3px 2px;${todayStyle}min-height:52px">
+      <div style="text-align:center;font-size:14px;font-weight:700;color:${dateColor};margin-bottom:2px">${d}</div>
+      ${c>0?`<div style="text-align:center;font-size:11px;font-weight:800;color:#1D4ED8;background:#EFF6FF;border-radius:3px;padding:1px 3px;margin-bottom:1px;letter-spacing:-.4px">${fwShort(c)}</div>`:''}
+      ${u>0?`<div style="text-align:center;font-size:11px;font-weight:800;color:#B91C1C;background:#FEF2F2;border-radius:3px;padding:1px 3px;letter-spacing:-.4px">${fwShort(u)}</div>`:''}
+    </div>`;
+  }
+
+  html+=`</div>`;
+  document.getElementById('cal-grid').innerHTML=html;
+}
+
+// 내역 탭 클릭 시 달력 렌더
+const origGoTab=goTab;
+goTab=function(n){
+  origGoTab(n);
+  if(n==='history') setTimeout(buildCal,50);
+};
 </script>
 </body>
 </html>
