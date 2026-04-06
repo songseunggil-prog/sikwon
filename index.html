@@ -175,16 +175,9 @@ input::placeholder{color:var(--g200);font-weight:400;font-size:16px}
         <div class="smsbox-lbl">문자 미리보기</div>
         <div class="smstxt" id="c-preview">금액을 입력하세요</div>
       </div>
-      <div class="smsbox" id="c-photo-box" style="display:none">
-        <div class="smsbox-lbl">첨부 사진 미리보기</div>
-        <img id="c-photo-preview" style="width:100%;border-radius:8px;max-height:200px;object-fit:contain" src="">
-        <div style="margin-top:8px;font-size:12px;color:var(--g400)">문자 앱 열린 후 이 사진을 직접 첨부하세요</div>
+      <div style="background:var(--g50);border:1.5px solid var(--g200);border-radius:var(--rs);padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--g600);line-height:1.7">
+        📎 문자 앱이 열리면 사진을 직접 첨부하세요
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:12px">
-        <button class="btn btn-out" style="flex:1;padding:12px;font-size:14px" onclick="document.getElementById('c-file').click()">📷 사진 선택</button>
-        <button class="btn btn-out" style="flex:0 0 auto;padding:12px;font-size:14px;color:var(--red);border-color:#FECACA" id="c-photo-del" onclick="clearPhoto()" style="display:none">✕</button>
-      </div>
-      <input type="file" id="c-file" accept="image/*" style="display:none" onchange="loadPhoto(this)">
       <button class="btn btn-blue" onclick="doCharge()">문자 보내기</button>
     </div>
   </div>
@@ -397,48 +390,13 @@ function doUse(){
   sendSMS(txt);
 }
 
-// 사진 로드
-let chargePhotoUrl=null;
-function loadPhoto(input){
-  if(!input.files[0])return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    chargePhotoUrl=e.target.result;
-    document.getElementById('c-photo-preview').src=chargePhotoUrl;
-    document.getElementById('c-photo-box').style.display='block';
-    document.getElementById('c-photo-del').style.display='inline-block';
-  };
-  reader.readAsDataURL(input.files[0]);
-}
-function clearPhoto(){
-  chargePhotoUrl=null;
-  document.getElementById('c-photo-box').style.display='none';
-  document.getElementById('c-photo-del').style.display='none';
-  document.getElementById('c-file').value='';
-}
-
-// 문자 보내기: 사진 있으면 다운로드 후 문자앱 열기
+// 문자 보내기: 클립보드 복사 + 문자앱 열기
 function sendSMS(txt){
   try{ navigator.clipboard.writeText(txt); }catch(e){}
-  if(chargePhotoUrl){
-    // 사진 다운로드 (카메라롤 저장)
-    const a=document.createElement('a');
-    a.href=chargePhotoUrl;
-    a.download='식권_'+Date.now()+'.jpg';
-    a.click();
-    showToast('사진 저장됨 · 문자앱에서 첨부 후 붙여넣기');
-    clearPhoto();
-    setTimeout(()=>{
-      const b=document.createElement('a');
-      b.href='sms:'+PHONE;
-      b.click();
-    },1000);
-  } else {
-    const a=document.createElement('a');
-    a.href='sms:'+PHONE;
-    a.click();
-    showToast('문자 앱이 열렸습니다 · 붙여넣기 하세요');
-  }
+  const a=document.createElement('a');
+  a.href='sms:'+PHONE;
+  a.click();
+  showToast('문자 앱이 열렸습니다 · 붙여넣기 하세요');
 }
 
 // 내역 개별 삭제
@@ -494,8 +452,11 @@ function doConfirm(){
     S.balance=Math.max(0,newBal);
     showToast('잔액이 변경되었습니다');
   } else if(MA==='reset'){
-    S={balance:0,totalCharge:0,totalUse:0,history:[]};
+    localStorage.removeItem('sikwon4');
+    closeModal();
     showToast('전체 초기화 완료');
+    setTimeout(()=>location.reload(), 1000);
+    return;
   }
   save();render();closeModal();
 }
